@@ -36,7 +36,6 @@ public class People {
         Spark.get(
                 "/",
                 ((request, response) -> {
-                    //Session session = request.session();
                     String offset = request.queryParams("offset");
                     int counter;
                     if (offset == null){
@@ -44,14 +43,15 @@ public class People {
                     } else {
                         counter = Integer.valueOf(offset);
                     }
-                    if (!(counter<people.size())){
+
+                    if (! (counter < people.size())){
                         Spark.halt(403);
                     } else {
-                        ArrayList<Person> smallList = new ArrayList(people.subList(counter, counter + 20));
 
+                        ArrayList<Person> smallList = new ArrayList(people.subList(counter, counter + 20));
                         HashMap m = new HashMap();
                         m.put("people", smallList);
-                        m.put("offset", counter);
+                        m.put("counter", counter+ 20);
                         return new ModelAndView(m, "people.html");
                     }
                     return new ModelAndView(new HashMap(), "people.html");
