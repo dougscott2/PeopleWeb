@@ -55,8 +55,39 @@ public class People {
                         return new ModelAndView(m, "people.html");
                     }
                     return new ModelAndView(new HashMap(), "people.html");
+                }),
+                new MustacheTemplateEngine()
+        );
+
+        Spark.get(
+                "/person",
+                ((request, response) -> {
+                    String personID = request.queryParams("id");
+                    int idNum = Integer.valueOf(personID)-1;
+
+                    /**this is long and drawn out but works.... for some reason i couldn't make a temp person
+                    and draw their info from the single person object
+                    so instead i'm searching through the array list each time.**/
+
+                   /* String firstName = people.get(idNum).firstName;
+                    String lastName = people.get(idNum).lastName;
+                    String email = people.get(idNum).email;
+                    String country = people.get(idNum).country;
+                    String ip = people.get(idNum).ip;
+                    int id = people.get(idNum).id;*/
 
 
+
+                    HashMap m = new HashMap();
+                    m.put("firstname", people.get(idNum).firstName);
+                    m.put("lastname", people.get(idNum).lastName);
+                    m.put("email", people.get(idNum).email);
+                    m.put("country", people.get(idNum).country);
+                    m.put("ip", people.get(idNum).ip);
+                    m.put("id", people.get(idNum).id);
+
+
+                    return new ModelAndView(m, "person.html");
                 }),
                 new MustacheTemplateEngine()
         );
