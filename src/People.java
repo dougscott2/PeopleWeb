@@ -1,6 +1,12 @@
+import spark.ModelAndView;
+import spark.Session;
+import spark.Spark;
+import spark.template.mustache.MustacheTemplateEngine;
+
 import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * Created by zach on 10/19/15.
@@ -21,7 +27,39 @@ public class People {
             people.add(person);
         }
 
+
+
+
+
+
         // write Spark route here
+        Spark.get(
+                "/",
+                ((request, response) -> {
+                    //Session session = request.session();
+                    String offset = request.queryParams("offset");
+                    int counter;
+                    if (offset == null){
+                        counter = 0;
+                    } else {
+                        counter = Integer.valueOf(offset);
+                    }
+                    if (!(counter<people.size())){
+                        Spark.halt(403);
+                    } else {
+                        ArrayList<Person> smallList = new ArrayList(people.subList(counter, counter + 20));
+
+                        HashMap m = new HashMap();
+                        m.put("people", smallList);
+                        m.put("offset", counter);
+                        return new ModelAndView(m, "people.html");
+                    }
+                    return new ModelAndView(new HashMap(), "people.html");
+
+
+                }),
+                new MustacheTemplateEngine()
+        );
     }
 
     static String readFile(String fileName) {
