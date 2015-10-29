@@ -12,7 +12,9 @@ import java.util.HashMap;
  * Created by zach on 10/19/15.
  */
 public class People {
+    static final int NEXTSTEP = 20;
     public static void main(String[] args) {
+
         ArrayList<Person> people = new ArrayList();
 
         String fileContent = readFile("people.csv");
@@ -27,49 +29,47 @@ public class People {
             people.add(person);
         }
 
-
-
-
-
-
-        // write Spark route here
         Spark.get(
                 "/",
                 ((request, response) -> {
                     String offset = request.queryParams("offset");
                     int counter;
+                    int oldcounter;
                     if (offset == null){
                         counter = 0;
                     } else {
                         counter = Integer.valueOf(offset);
                     }
-
-                    if (! (counter < people.size())){
+                    if (!(counter < people.size())){
                         Spark.halt(403);
                     } else {
-
-                        ArrayList<Person> smallList = new ArrayList(people.subList(counter, counter + 20));
+                        ArrayList<Person> smallList = new ArrayList(people.subList(
+                                Math.max(0, Math.min(people.size(), counter)),
+                                Math.max(0, Math.min(people.size(), counter + NEXTSTEP))));
                         HashMap m = new HashMap();
                         m.put("people", smallList);
-                        m.put("counter", counter+ 20);
+                        m.put("counter", counter + NEXTSTEP);
+
+
+                        boolean showPrevious = counter > 0;
+                        m.put("showPrevious", showPrevious);
+
+
+                        boolean showNext = counter + NEXTSTEP < people.size();
+                        m.put("showNext", showNext);
                         return new ModelAndView(m, "people.html");
                     }
                     return new ModelAndView(new HashMap(), "people.html");
                 }),
                 new MustacheTemplateEngine()
         );
-
         Spark.get(
                 "/person",
                 ((request, response) -> {
                     String personID = request.queryParams("id");
-                    int idNum = Integer.valueOf(personID)-1;
-                    Person person = people.get(idNum);
-
                     /**this is long and drawn out but works.... for some reason i couldn't make a temp person
                     and draw their info from the single person object
                     so instead i'm searching through the array list each time.**/
-
                    /* String firstName = people.get(idNum).firstName;
                     String lastName = people.get(idNum).lastName;
                     String email = people.get(idNum).email;
@@ -83,13 +83,14 @@ public class People {
                     m.put("ip", people.get(idNum).ip);
                     m.put("id", people.get(idNum).id);*/
 
-
-
                     HashMap m = new HashMap();
+                    try {
+                        int idNum = Integer.valueOf(personID);
+                        Person person = people.get(idNum-1);
+                        m.put("person", person);
+                    } catch (Exception e) {
 
-                    m.put("person", person);
-
-
+                    }
                     return new ModelAndView(m, "person.html");
                 }),
                 new MustacheTemplateEngine()

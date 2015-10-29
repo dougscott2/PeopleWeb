@@ -1,17 +1,22 @@
 <html>
 <body>
 {{#people}}
-<a href="/person?id={{id}}">{{firstName}} {{lastName}}</a> <br>
+{{id}} <a href="/person?id={{id}}">{{firstName}} {{lastName}}</a> <br>
 {{/people}}
 <br>
-<!--   in theory i could get all this to show up on the people.html too but you couldn't go back
+<!--   in theory i could get all this to show up on the people.html and not have to make /person
 {{firstname}} {{lastname}} <br>
 {{email}}<br>
 {{ip}} <br>
 {{country}} <br>
 {{id}} <br>
 -->
+{{#showPrevious}}
+<a href="/?offset={{counter}}">Previous</a>
+    {{/showPrevious}}
+{{#showNext}}
 <a href="/?offset={{counter}}">Next</a>
+{{/showNext}}
 <br>
 
 
