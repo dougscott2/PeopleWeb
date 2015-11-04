@@ -17,6 +17,7 @@ public class Person implements Comparable {
         this.country = country;
         this.ip = ip;
     }
+    public Person(){}
 
     @Override
     public String toString() {
