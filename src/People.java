@@ -5,7 +5,6 @@ import spark.template.mustache.MustacheTemplateEngine;
 
 import java.io.File;
 import java.io.FileReader;
-import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -14,109 +13,9 @@ import java.util.HashMap;
  */
 public class People {
     static final int NEXTSTEP = 20;
+    public static void main(String[] args) {
 
-    public static void createTables (Connection conn) throws SQLException {
-        Statement stmt = conn.createStatement();
-        stmt.execute("DROP TABLE IF EXISTS people");
-         stmt.execute("CREATE TABLE IF NOT EXISTS people (id IDENTITY, first_name VARCHAR, last_name VARCHAR, email VARCHAR, " +
-                "country VARCHAR, ip VARCHAR)");
-    }
-
-    public static void insertPerson(Connection conn, String firstName, String lastName, String email, String country, String ip) throws SQLException {
-        PreparedStatement stmt = conn.prepareStatement("INSERT INTO people VALUES (NULL, ?,?,?,?,?)");
-        stmt.setString(1, firstName );
-        stmt.setString(2, lastName);
-        stmt.setString(3, email);
-        stmt.setString(4, country);
-        stmt.setString(5, ip);
-        stmt.execute();
-    }
-
-    public static Person selectPerson(Connection conn, int id) throws SQLException {
-        PreparedStatement stmt = conn.prepareStatement("SELECT * FROM people WHERE id = ?");
-        stmt.setInt( 1 , id);
-        Person person = new Person();
-        ResultSet results = stmt.executeQuery();
-        if (results.next()){
-            person.firstName = results.getString("first_name");
-            person.lastName = results.getString("last_name");
-            person.email = results.getString("email");
-            person.country = results.getString("country");
-            person.ip = results.getString("ip");
-            person.id = results.getInt("id");
-        }
-        return person;
-    }
-    public static Person selectPerson(Connection conn) throws SQLException {
-        return selectPerson(conn, 0);
-    }
-
-    public static void populateDatabase(Connection conn) throws SQLException {
-        Statement stmtDrop = conn.createStatement();
-        stmtDrop.execute("DROP TABLE IF EXISTS people");
-        createTables(conn);
         ArrayList<Person> people = new ArrayList();
-        String fileContent = readFile("people.csv");
-        String[] lines = fileContent.split("\n");
-
-        for (String line : lines) {
-            if (line == lines[0])
-                continue;
-
-            String[] columns = line.split(",");
-            Person person = new Person(Integer.valueOf(columns[0]), columns[1], columns[2], columns[3], columns[4], columns[5]);
-            people.add(person);
-            insertPerson(conn, columns[1], columns[2], columns[3], columns[4], columns[5]);
-        }
-    }
-    public static ArrayList<Person> selectPeople (Connection conn, int offset) throws SQLException {
-        ArrayList<Person> people = new ArrayList<>();
-        String query = String.format("SELECT * FROM people LIMIT ? OFFSET ?"); //don't need string format yet but prepping for future
-        PreparedStatement stmt = conn.prepareStatement(query);
-        stmt.setInt(1, NEXTSTEP);
-        stmt.setInt(2, offset);
-        ResultSet results = stmt.executeQuery();
-
-        while (results.next()){
-            Person person = new Person();
-            person.firstName = results.getString("first_name");
-            person.lastName = results.getString("last_name");
-            person.email = results.getString("email");
-            person.country = results.getString("country");
-            person.ip = results.getString("ip");
-            person.id = results.getInt("id");
-
-            people.add(person);
-        }
-        return people;
-    }
-    public static ArrayList<Person> selectPeople (Connection conn) throws SQLException {
-        return selectPeople(conn, 0);
-    }
-    public static int countPeople (Connection conn) throws SQLException {
-         Statement stmt = conn.createStatement();
-        ResultSet results = stmt.executeQuery("SELECT COUNT (*) AS counter FROM people");
-        int count =0;
-        if (results.next()){
-            count = results.getInt("counter");
-        }
-        return count;
-    }
-
-
-
-
-
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public static void main(String[] args) throws SQLException {
-
-        Connection conn = DriverManager.getConnection("jdbc:h2:./main");
-        createTables(conn);
-        populateDatabase(conn);
-
-
-       /* ArrayList<Person> people = new ArrayList();
 
         String fileContent = readFile("people.csv");
         String[] lines = fileContent.split("\n");
@@ -128,34 +27,36 @@ public class People {
             String[] columns = line.split(",");
             Person person = new Person(Integer.valueOf(columns[0]), columns[1], columns[2], columns[3], columns[4], columns[5]);
             people.add(person);
-        }*/
+        }
 
-         Spark.get(
+        Spark.get(
                 "/",
                 ((request, response) -> {
                     String offset = request.queryParams("offset");
-
-                  int counter;
+                    int counter;
+                    int oldcounter;
                     if (offset == null){
                         counter = 0;
                     } else {
                         counter = Integer.valueOf(offset);
                     }
-                    if (!(counter < countPeople(conn))){
+                    if (!(counter < people.size())){
                         Spark.halt(403);
                     } else {
-
+                        ArrayList<Person> smallList = new ArrayList(people.subList(
+                                Math.max(0, Math.min(people.size(), counter)),
+                                Math.max(0, Math.min(people.size(), counter + NEXTSTEP))));
                         HashMap m = new HashMap();
-
+                        m.put("people", smallList);
                         m.put("counter", counter + NEXTSTEP);
-                        m.put("othercounter", counter - NEXTSTEP);
-                        m.put("people", selectPeople(conn, counter));
-                        m.put("person", selectPeople(conn));
+                        m.put("othercounter", counter-NEXTSTEP);
 
 
                         boolean showPrevious = counter > 0;
                         m.put("showPrevious", showPrevious);
-                        boolean showNext = counter + NEXTSTEP < countPeople(conn);
+
+
+                        boolean showNext = counter + NEXTSTEP < people.size();
                         m.put("showNext", showNext);
                         return new ModelAndView(m, "people.html");
                     }
@@ -167,10 +68,26 @@ public class People {
                 "/person",
                 ((request, response) -> {
                     String personID = request.queryParams("id");
+                    /**this is long and drawn out but works.... for some reason i couldn't make a temp person
+                    and draw their info from the single person object
+                    so instead i'm searching through the array list each time.**/
+                   /* String firstName = people.get(idNum).firstName;
+                    String lastName = people.get(idNum).lastName;
+                    String email = people.get(idNum).email;
+                    String country = people.get(idNum).country;
+                    String ip = people.get(idNum).ip;
+                    int id = people.get(idNum).id;*/
+                     /* m.put("firstname", person.firstName);
+                    m.put("lastname", person.lastName);
+                    m.put("email", person.email);
+                    m.put("country", people.get(idNum).country);
+                    m.put("ip", people.get(idNum).ip);
+                    m.put("id", people.get(idNum).id);*/
+
                     HashMap m = new HashMap();
                     try {
                         int idNum = Integer.valueOf(personID);
-                        Person person =  selectPerson(conn, idNum);
+                        Person person = people.get(idNum-1);
                         m.put("person", person);
                     } catch (Exception e) {
 
@@ -180,7 +97,6 @@ public class People {
                 new MustacheTemplateEngine()
         );
     }
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     static String readFile(String fileName) {
         File f = new File(fileName);
